@@ -1,4 +1,8 @@
+import sys
 import os
+# Add the project root to sys.path so Streamlit Cloud resolves 'src'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import streamlit as st
 import torch
 from huggingface_hub import hf_hub_download
@@ -9,8 +13,8 @@ st.set_page_config(page_title="CodeGPT 164M Autocompleter", page_icon="⚡", lay
 st.title("⚡ CodeGPT: 164M Parameter Causal Language Model")
 st.caption("Custom Decoder-Only Causal Transformer engineered from scratch in PyTorch")
 
-# REPLACE THIS WITH YOUR ACTUAL HUGGING FACE USERNAME
-HF_REPO_ID = "sks01dev/code-gpt-164m"
+# Replace this with your actual Hugging Face Repo ID (e.g., "username/code-gpt-164m")
+HF_REPO_ID = "YOUR_HUGGINGFACE_USERNAME/code-gpt-164m"
 MODEL_FILENAME = "code_gpt.pt"
 
 @st.cache_resource
@@ -21,11 +25,11 @@ def load_model():
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    # Automatically download weights from Hugging Face Hub if not cached locally
+    # Automatically download model weights from Hugging Face Model Hub if not cached locally
     with st.spinner("Downloading model weights from Hugging Face Hub..."):
         model_path = hf_hub_download(repo_id=HF_REPO_ID, filename=MODEL_FILENAME)
         model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
-        st.success("Loaded model checkpoint successfully from Hugging Face Hub!")
+        st.success("Loaded model checkpoint successfully!")
     
     model.to(device)
     model.eval()
@@ -43,7 +47,7 @@ if st.button("Generate Python Code"):
         output_ids = model.generate_kv(input_ids, max_new_tokens=120)[0]
         raw_text = tokenizer.decode(output_ids.tolist())
         
-        # Clean output boundary
+        # Post-process generated output
         clean_text = raw_text.split("<|endoftext|>")[0]
         if prompt in clean_text:
             clean_text = clean_text.replace(prompt, "").strip()
