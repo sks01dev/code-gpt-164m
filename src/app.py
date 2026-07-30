@@ -1,45 +1,46 @@
-import streamlit as st
+import gradio as gr
 import torch
 from transformers import GPT2Tokenizer
 from src.model import CodeGPT
 
-st.set_page_config(page_title="CodeGPT 164M Autocompleter", page_icon="⚡", layout="centered")
-st.title("⚡ CodeGPT: 164M Parameter Causal Language Model")
-st.caption("Custom Decoder-Only Causal Transformer engineered from scratch in PyTorch")
+# Load model and tokenizer
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+tokenizer.pad_token = tokenizer.eos_token
+model = CodeGPT(vocab_size=tokenizer.vocab_size)
 
-@st.cache_resource
-def load_model():
-    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    tokenizer.pad_token = tokenizer.eos_token
-    model = CodeGPT(vocab_size=tokenizer.vocab_size)
-    
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    try:
-        model.load_state_dict(torch.load("code_gpt.pt", map_location=torch.device(device)))
-        st.success("Loaded model checkpoint `code_gpt.pt` successfully!")
-    except FileNotFoundError:
-        st.info("Checkpoint `code_gpt.pt` not found locally. Running baseline initialized weights.")
-    
-    model.to(device)
-    model.eval()
-    return model, tokenizer, device
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+try:
+    model.load_state_dict(torch.load("code_gpt.pt", map_location=torch.device(device)))
+    print("Successfully loaded code_gpt.pt!")
+except FileNotFoundError:
+    print("Warning: code_gpt.pt not found. Running initialized weights.")
 
-model, tokenizer, device = load_model()
+model.to(device)
+model.eval()
 
-instruction = st.text_input("Enter Python Task Instruction:", "Write a function to check if a number is prime.")
-
-if st.button("Generate Python Code"):
+def generate_code(instruction):
     prompt = f"# Instruction: {instruction}\n"
     input_ids = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
     
-    with st.spinner("Executing KV-cached autoregressive loop..."):
+    with torch.no_grad():
         output_ids = model.generate_kv(input_ids, max_new_tokens=120)[0]
         raw_text = tokenizer.decode(output_ids.tolist())
         
-        # Robust post-processing parser
+        # Clean up output boundary
         clean_text = raw_text.split("<|endoftext|>")[0]
         if prompt in clean_text:
             clean_text = clean_text.replace(prompt, "").strip()
             
-    st.markdown("### Generated Code Output:")
-    st.code(clean_text if clean_text else raw_text, language="python")
+    return clean_text if clean_text else raw_text
+
+# Define Gradio UI Interface
+demo = gr.Interface(
+    fn=generate_code,
+    inputs=gr.Textbox(lines=2, placeholder="e.g. Write a function to check if a number is prime.", label="Python Task Instruction"),
+    outputs=gr.Code(language="python", label="Generated Code Output"),
+    title="⚡ CodeGPT: 164M Parameter Causal Language Model",
+    description="A custom decoder-only Causal Transformer engineered from scratch in PyTorch with KV-Cache acceleration."
+)
+
+if __name__ == "__main__":
+    demo.launch()
