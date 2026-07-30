@@ -1,0 +1,4 @@
+code_gpt.pt
+__pycache__/
+*.pyc
+.env
