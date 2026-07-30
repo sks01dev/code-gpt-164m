@@ -1,6 +1,6 @@
 # CodeGPT: 164M Parameter Causal Language Model
 
-A custom decoder-only Causal Transformer engineered completely from scratch in PyTorch following GPT-2 Small architectural specifications.
+A custom decoder-only Causal Transformer engineered completely from scratch in PyTorch following GPT-2 Small architectural specifications inspired from **Andrej Karpthy**.
 
 ## 📌 Technical Overview
 This repository contains the full implementation of a 162.5M parameter autoregressive language model trained on a Python instruction-following dataset (`Alpaca` schema). The core objective of this project is to demonstrate low-level Transformer implementation mechanics, multi-head attention algebra, CUDA memory management, and custom inference optimizations without relying on high-level model abstractions.
