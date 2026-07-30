@@ -14,7 +14,7 @@ st.title("⚡ CodeGPT: 164M Parameter Causal Language Model")
 st.caption("Custom Decoder-Only Causal Transformer engineered from scratch in PyTorch")
 
 # Replace this with your actual Hugging Face Repo ID (e.g., "username/code-gpt-164m")
-HF_REPO_ID = "YOUR_HUGGINGFACE_USERNAME/code-gpt-164m"
+HF_REPO_ID = "sks01dev/code-gpt-164m"
 MODEL_FILENAME = "code_gpt.pt"
 
 @st.cache_resource
