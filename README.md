@@ -10,6 +10,10 @@ This repository demonstrates low-level Transformer implementation mechanics, att
 
 ---
 
+## Decoder Architecture Diagram
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/6f68a7c1-d9e3-4698-85b6-ca04e3582a54" />
+
+---
 
 The system is organized into a clean, modular Python package alongside an automated cloud deployment architecture:
 
