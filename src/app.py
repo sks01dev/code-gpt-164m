@@ -1,46 +1,52 @@
-import gradio as gr
+import os
+import streamlit as st
 import torch
+from huggingface_hub import hf_hub_download
 from transformers import GPT2Tokenizer
 from src.model import CodeGPT
 
-# Load model and tokenizer
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-tokenizer.pad_token = tokenizer.eos_token
-model = CodeGPT(vocab_size=tokenizer.vocab_size)
+st.set_page_config(page_title="CodeGPT 164M Autocompleter", page_icon="⚡", layout="centered")
+st.title("⚡ CodeGPT: 164M Parameter Causal Language Model")
+st.caption("Custom Decoder-Only Causal Transformer engineered from scratch in PyTorch")
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-try:
-    model.load_state_dict(torch.load("code_gpt.pt", map_location=torch.device(device)))
-    print("Successfully loaded code_gpt.pt!")
-except FileNotFoundError:
-    print("Warning: code_gpt.pt not found. Running initialized weights.")
+# REPLACE THIS WITH YOUR ACTUAL HUGGING FACE USERNAME
+HF_REPO_ID = "sks01dev/code-gpt-164m"
+MODEL_FILENAME = "code_gpt.pt"
 
-model.to(device)
-model.eval()
+@st.cache_resource
+def load_model():
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    tokenizer.pad_token = tokenizer.eos_token
+    model = CodeGPT(vocab_size=tokenizer.vocab_size)
+    
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
+    # Automatically download weights from Hugging Face Hub if not cached locally
+    with st.spinner("Downloading model weights from Hugging Face Hub..."):
+        model_path = hf_hub_download(repo_id=HF_REPO_ID, filename=MODEL_FILENAME)
+        model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
+        st.success("Loaded model checkpoint successfully from Hugging Face Hub!")
+    
+    model.to(device)
+    model.eval()
+    return model, tokenizer, device
 
-def generate_code(instruction):
+model, tokenizer, device = load_model()
+
+instruction = st.text_input("Enter Python Task Instruction:", "Write a function to check if a number is prime.")
+
+if st.button("Generate Python Code"):
     prompt = f"# Instruction: {instruction}\n"
     input_ids = torch.tensor(tokenizer.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
     
-    with torch.no_grad():
+    with st.spinner("Executing KV-cached autoregressive loop..."):
         output_ids = model.generate_kv(input_ids, max_new_tokens=120)[0]
         raw_text = tokenizer.decode(output_ids.tolist())
         
-        # Clean up output boundary
+        # Clean output boundary
         clean_text = raw_text.split("<|endoftext|>")[0]
         if prompt in clean_text:
             clean_text = clean_text.replace(prompt, "").strip()
             
-    return clean_text if clean_text else raw_text
-
-# Define Gradio UI Interface
-demo = gr.Interface(
-    fn=generate_code,
-    inputs=gr.Textbox(lines=2, placeholder="e.g. Write a function to check if a number is prime.", label="Python Task Instruction"),
-    outputs=gr.Code(language="python", label="Generated Code Output"),
-    title="⚡ CodeGPT: 164M Parameter Causal Language Model",
-    description="A custom decoder-only Causal Transformer engineered from scratch in PyTorch with KV-Cache acceleration."
-)
-
-if __name__ == "__main__":
-    demo.launch()
+    st.markdown("### Generated Code Output:")
+    st.code(clean_text if clean_text else raw_text, language="python")
