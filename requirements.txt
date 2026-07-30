@@ -3,3 +3,4 @@ transformers
 datasets
 streamlit
 huggingface_hub
+hf-xet
